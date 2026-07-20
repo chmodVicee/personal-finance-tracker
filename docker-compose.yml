@@ -13,6 +13,7 @@ services:
 
   backend:
     build: ./backend
+    image: viceeente/finance-backend:latest
     restart: always
     ports:
       - "8000:8000"
