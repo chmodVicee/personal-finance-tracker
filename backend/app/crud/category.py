@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.db.models import Category
-from app.schemas.category import CategoryCreate
+from app.schemas.category import CategoryCreate, CategoryUpdate
 
 
 def get_categories(db: Session, user_id: int) -> list[Category]:
@@ -24,6 +24,14 @@ def get_category(db: Session, category_id: int, user_id: int) -> Category | None
 def create_category(db: Session, category_in: CategoryCreate, user_id: int) -> Category:
     category = Category(**category_in.model_dump(), user_id=user_id)
     db.add(category)
+    db.commit()
+    db.refresh(category)
+    return category
+
+
+def update_category(db: Session, category: Category, category_in: CategoryUpdate) -> Category:
+    for field, value in category_in.model_dump(exclude_unset=True).items():
+        setattr(category, field, value)
     db.commit()
     db.refresh(category)
     return category

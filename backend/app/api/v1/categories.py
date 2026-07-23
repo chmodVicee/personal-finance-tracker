@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.crud.category import create_category, delete_category, get_categories, get_category
+from app.crud.category import create_category, delete_category, get_categories, get_category, update_category
 from app.db.models import User
-from app.schemas.category import CategoryCreate, CategoryResponse
+from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 
@@ -25,6 +25,16 @@ def get_one(category_id: int, db: Session = Depends(get_db), current_user: User 
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     return category
+
+
+@router.put("/{category_id}", response_model=CategoryResponse)
+def update(category_id: int, category_in: CategoryUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    category = get_category(db, category_id, current_user.id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    if category.user_id is None:
+        raise HTTPException(status_code=403, detail="Cannot edit default categories")
+    return update_category(db, category, category_in)
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
