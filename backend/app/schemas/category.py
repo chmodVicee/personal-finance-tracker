@@ -9,6 +9,11 @@ class CategoryCreate(BaseModel):
     color: str = "#6366f1"
 
 
+class CategoryUpdate(BaseModel):
+    name: str | None = None
+    color: str | None = None
+
+
 class CategoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

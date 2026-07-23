@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
-import { createAccount, deleteAccount, getAccounts } from '../api/accounts'
+import { createAccount, deleteAccount, getAccounts, updateAccount } from '../api/accounts'
 import './Accounts.css'
 
 const ACCOUNT_TYPES = ['checking', 'savings', 'credit_card', 'cash']
-
 const emptyForm = { name: '', type: 'checking', balance: '', currency: 'CLP' }
 
 export default function Accounts() {
   const [accounts, setAccounts] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -31,6 +32,27 @@ export default function Accounts() {
       setShowForm(false)
     } catch {
       setError('Could not create account')
+    }
+  }
+
+  const startEdit = (account) => {
+    setEditingId(account.id)
+    setEditForm({ name: account.name, balance: account.balance, currency: account.currency })
+  }
+
+  const handleEditChange = (e) =>
+    setEditForm({ ...editForm, [e.target.name]: e.target.value })
+
+  const handleEditSubmit = async (id) => {
+    try {
+      const res = await updateAccount(id, {
+        ...editForm,
+        balance: parseFloat(editForm.balance),
+      })
+      setAccounts(accounts.map((a) => (a.id === id ? res.data : a)))
+      setEditingId(null)
+    } catch {
+      setError('Could not update account')
     }
   }
 
@@ -84,22 +106,44 @@ export default function Accounts() {
         <p className="empty">No accounts yet.</p>
       ) : (
         <ul className="account-list">
-          {accounts.map((account) => (
-            <li key={account.id} className="account-item">
-              <div className="account-info">
-                <span className="account-name">{account.name}</span>
-                <span className="account-type">{account.type.replace('_', ' ')}</span>
-              </div>
-              <div className="account-right">
-                <span className="account-balance">
-                  {account.currency} {account.balance.toLocaleString()}
-                </span>
-                <button className="btn-delete" onClick={() => handleDelete(account.id)}>
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
+          {accounts.map((account) =>
+            editingId === account.id ? (
+              <li key={account.id} className="account-item editing">
+                <div className="edit-row">
+                  <div className="field">
+                    <label>Name</label>
+                    <input name="name" value={editForm.name} onChange={handleEditChange} />
+                  </div>
+                  <div className="field">
+                    <label>Balance</label>
+                    <input name="balance" type="number" value={editForm.balance} onChange={handleEditChange} />
+                  </div>
+                  <div className="field">
+                    <label>Currency</label>
+                    <input name="currency" value={editForm.currency} onChange={handleEditChange} maxLength={3} />
+                  </div>
+                </div>
+                <div className="edit-actions">
+                  <button className="btn-primary" onClick={() => handleEditSubmit(account.id)}>Save</button>
+                  <button className="btn-cancel" onClick={() => setEditingId(null)}>Cancel</button>
+                </div>
+              </li>
+            ) : (
+              <li key={account.id} className="account-item">
+                <div className="account-info">
+                  <span className="account-name">{account.name}</span>
+                  <span className="account-type">{account.type.replace('_', ' ')}</span>
+                </div>
+                <div className="account-right">
+                  <span className="account-balance">
+                    {account.currency} {account.balance.toLocaleString()}
+                  </span>
+                  <button className="btn-edit" onClick={() => startEdit(account)}>Edit</button>
+                  <button className="btn-delete" onClick={() => handleDelete(account.id)}>Delete</button>
+                </div>
+              </li>
+            )
+          )}
         </ul>
       )}
     </div>

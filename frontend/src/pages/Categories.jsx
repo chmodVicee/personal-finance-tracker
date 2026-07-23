@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createCategory, deleteCategory, getCategories } from '../api/categories'
+import { createCategory, deleteCategory, getCategories, updateCategory } from '../api/categories'
 import './Categories.css'
 
 const emptyForm = { name: '', type: 'expense', color: '#6366f1' }
@@ -8,6 +8,8 @@ export default function Categories() {
   const [categories, setCategories] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -32,6 +34,24 @@ export default function Categories() {
     }
   }
 
+  const startEdit = (category) => {
+    setEditingId(category.id)
+    setEditForm({ name: category.name, color: category.color })
+  }
+
+  const handleEditChange = (e) =>
+    setEditForm({ ...editForm, [e.target.name]: e.target.value })
+
+  const handleEditSubmit = async (id) => {
+    try {
+      const res = await updateCategory(id, editForm)
+      setCategories(categories.map((c) => (c.id === id ? res.data : c)))
+      setEditingId(null)
+    } catch {
+      setError('Could not update category')
+    }
+  }
+
   const handleDelete = async (id) => {
     if (!confirm('Delete this category?')) return
     try {
@@ -44,6 +64,36 @@ export default function Categories() {
 
   const income = categories.filter((c) => c.type === 'income')
   const expense = categories.filter((c) => c.type === 'expense')
+
+  const renderCategory = (c) =>
+    editingId === c.id ? (
+      <li key={c.id} className="category-item editing">
+        <div className="edit-row">
+          <input name="name" value={editForm.name} onChange={handleEditChange} />
+          <div className="color-field">
+            <input type="color" name="color" value={editForm.color} onChange={handleEditChange} className="color-input" />
+            <span className="color-value">{editForm.color}</span>
+          </div>
+        </div>
+        <div className="edit-actions">
+          <button className="btn-primary" onClick={() => handleEditSubmit(c.id)}>Save</button>
+          <button className="btn-cancel" onClick={() => setEditingId(null)}>Cancel</button>
+        </div>
+      </li>
+    ) : (
+      <li key={c.id} className="category-item">
+        <div className="category-left">
+          <span className="category-dot" style={{ background: c.color }} />
+          <span className="category-name">{c.name}</span>
+        </div>
+        {c.user_id && (
+          <div className="item-actions">
+            <button className="btn-edit" onClick={() => startEdit(c)}>Edit</button>
+            <button className="btn-delete" onClick={() => handleDelete(c.id)}>Delete</button>
+          </div>
+        )}
+      </li>
+    )
 
   if (loading) return <p className="loading">Loading...</p>
 
@@ -89,40 +139,15 @@ export default function Categories() {
           {expense.length === 0 ? (
             <p className="empty">No expense categories.</p>
           ) : (
-            <ul className="category-list">
-              {expense.map((c) => (
-                <li key={c.id} className="category-item">
-                  <div className="category-left">
-                    <span className="category-dot" style={{ background: c.color }} />
-                    <span className="category-name">{c.name}</span>
-                  </div>
-                  {c.user_id && (
-                    <button className="btn-delete" onClick={() => handleDelete(c.id)}>Delete</button>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <ul className="category-list">{expense.map(renderCategory)}</ul>
           )}
         </div>
-
         <div className="category-group">
           <h3 className="group-title income-title">Income</h3>
           {income.length === 0 ? (
             <p className="empty">No income categories.</p>
           ) : (
-            <ul className="category-list">
-              {income.map((c) => (
-                <li key={c.id} className="category-item">
-                  <div className="category-left">
-                    <span className="category-dot" style={{ background: c.color }} />
-                    <span className="category-name">{c.name}</span>
-                  </div>
-                  {c.user_id && (
-                    <button className="btn-delete" onClick={() => handleDelete(c.id)}>Delete</button>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <ul className="category-list">{income.map(renderCategory)}</ul>
           )}
         </div>
       </div>

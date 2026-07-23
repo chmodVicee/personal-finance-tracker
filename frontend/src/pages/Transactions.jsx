@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getAccounts } from '../api/accounts'
 import { getCategories } from '../api/categories'
-import { createTransaction, deleteTransaction, getTransactions } from '../api/transactions'
+import { createTransaction, deleteTransaction, getTransactions, updateTransaction } from '../api/transactions'
 import './Transactions.css'
 
 const emptyForm = {
@@ -19,6 +19,8 @@ export default function Transactions() {
   const [categories, setCategories] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -34,15 +36,11 @@ export default function Transactions() {
     ).finally(() => setLoading(false))
   }, [])
 
-  const filteredCategories = categories.filter((c) => c.type === form.type)
+  const filteredCategories = (type) => categories.filter((c) => c.type === type)
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setForm((f) => ({
-      ...f,
-      [name]: value,
-      ...(name === 'type' ? { category_id: '' } : {}),
-    }))
+    setForm((f) => ({ ...f, [name]: value, ...(name === 'type' ? { category_id: '' } : {}) }))
   }
 
   const handleSubmit = async (e) => {
@@ -62,6 +60,36 @@ export default function Transactions() {
       setShowForm(false)
     } catch {
       setError('Could not create transaction')
+    }
+  }
+
+  const startEdit = (tx) => {
+    setEditingId(tx.id)
+    setEditForm({
+      amount: tx.amount,
+      category_id: tx.category_id ?? '',
+      description: tx.description ?? '',
+      date: new Date(tx.date).toISOString().slice(0, 16),
+      type: tx.type,
+    })
+  }
+
+  const handleEditChange = (e) =>
+    setEditForm({ ...editForm, [e.target.name]: e.target.value })
+
+  const handleEditSubmit = async (tx) => {
+    try {
+      const payload = {
+        amount: parseFloat(editForm.amount),
+        category_id: editForm.category_id ? parseInt(editForm.category_id) : null,
+        description: editForm.description || null,
+        date: new Date(editForm.date).toISOString(),
+      }
+      const res = await updateTransaction(tx.id, payload)
+      setTransactions(transactions.map((t) => (t.id === tx.id ? res.data : t)))
+      setEditingId(null)
+    } catch {
+      setError('Could not update transaction')
     }
   }
 
@@ -97,43 +125,25 @@ export default function Transactions() {
             </div>
             <div className="field">
               <label>Amount</label>
-              <input
-                name="amount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.amount}
-                onChange={handleChange}
-                required
-              />
+              <input name="amount" type="number" min="0" step="0.01" value={form.amount} onChange={handleChange} required />
             </div>
             <div className="field">
               <label>Account</label>
               <select name="account_id" value={form.account_id} onChange={handleChange} required>
                 <option value="">Select account</option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </div>
             <div className="field">
               <label>Category</label>
               <select name="category_id" value={form.category_id} onChange={handleChange}>
                 <option value="">None</option>
-                {filteredCategories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
+                {filteredCategories(form.type).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div className="field">
               <label>Date</label>
-              <input
-                name="date"
-                type="datetime-local"
-                value={form.date}
-                onChange={handleChange}
-                required
-              />
+              <input name="date" type="datetime-local" value={form.date} onChange={handleChange} required />
             </div>
             <div className="field field-description">
               <label>Description</label>
@@ -149,25 +159,56 @@ export default function Transactions() {
         <p className="empty">No transactions yet.</p>
       ) : (
         <ul className="transaction-list">
-          {transactions.map((tx) => (
-            <li key={tx.id} className="transaction-item">
-              <div className="tx-left">
-                <span className={`tx-type-badge ${tx.type}`}>{tx.type}</span>
-                <div className="tx-meta">
-                  <span className="tx-desc">{tx.description || '—'}</span>
-                  <span className="tx-detail">
-                    {getAccountName(tx.account_id)} · {getCategoryName(tx.category_id)} · {new Date(tx.date).toLocaleDateString()}
-                  </span>
+          {transactions.map((tx) =>
+            editingId === tx.id ? (
+              <li key={tx.id} className="transaction-item editing">
+                <div className="edit-row">
+                  <div className="field">
+                    <label>Amount</label>
+                    <input name="amount" type="number" value={editForm.amount} onChange={handleEditChange} />
+                  </div>
+                  <div className="field">
+                    <label>Category</label>
+                    <select name="category_id" value={editForm.category_id} onChange={handleEditChange}>
+                      <option value="">None</option>
+                      {filteredCategories(editForm.type).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Date</label>
+                    <input name="date" type="datetime-local" value={editForm.date} onChange={handleEditChange} />
+                  </div>
+                  <div className="field field-description">
+                    <label>Description</label>
+                    <input name="description" value={editForm.description} onChange={handleEditChange} />
+                  </div>
                 </div>
-              </div>
-              <div className="tx-right">
-                <span className={`tx-amount ${tx.type}`}>
-                  {tx.type === 'income' ? '+' : '-'}{tx.amount.toLocaleString()}
-                </span>
-                <button className="btn-delete" onClick={() => handleDelete(tx.id)}>Delete</button>
-              </div>
-            </li>
-          ))}
+                <div className="edit-actions">
+                  <button className="btn-primary" onClick={() => handleEditSubmit(tx)}>Save</button>
+                  <button className="btn-cancel" onClick={() => setEditingId(null)}>Cancel</button>
+                </div>
+              </li>
+            ) : (
+              <li key={tx.id} className="transaction-item">
+                <div className="tx-left">
+                  <span className={`tx-type-badge ${tx.type}`}>{tx.type}</span>
+                  <div className="tx-meta">
+                    <span className="tx-desc">{tx.description || '—'}</span>
+                    <span className="tx-detail">
+                      {getAccountName(tx.account_id)} · {getCategoryName(tx.category_id)} · {new Date(tx.date).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="tx-right">
+                  <span className={`tx-amount ${tx.type}`}>
+                    {tx.type === 'income' ? '+' : '-'}{tx.amount.toLocaleString()}
+                  </span>
+                  <button className="btn-edit" onClick={() => startEdit(tx)}>Edit</button>
+                  <button className="btn-delete" onClick={() => handleDelete(tx.id)}>Delete</button>
+                </div>
+              </li>
+            )
+          )}
         </ul>
       )}
     </div>

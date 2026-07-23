@@ -93,8 +93,45 @@ personal-finance-tracker/
 │   ├── alembic/            # Database migrations
 │   ├── requirements.txt
 │   └── .env.example
-└── frontend/               # React + Vite (coming soon)
+└── frontend/
+    ├── src/
+    │   ├── api/            # Axios functions per resource
+    │   ├── store/          # Zustand global state
+    │   ├── components/     # Layout and shared components
+    │   └── pages/          # Login, Register, Dashboard, Accounts, Categories, Transactions
+    ├── index.html
+    └── vite.config.js      # Proxy to backend
 ```
+
+## Frontend Setup
+
+### 1. Install dependencies
+
+```bash
+cd frontend
+npm install
+```
+
+### 2. Start the dev server
+
+```bash
+npm run dev
+```
+
+Frontend available at `http://localhost:5173`
+
+> The dev server proxies `/api` requests to `http://localhost:8000` automatically. Make sure the backend is running before using the app.
+
+### Available pages
+
+| Route | Description |
+|---|---|
+| `/login` | Sign in |
+| `/register` | Create account |
+| `/dashboard` | Balance summary and recent transactions |
+| `/accounts` | Manage bank accounts and wallets |
+| `/categories` | Manage income and expense categories |
+| `/transactions` | Record and manage transactions |
 
 ## Git Workflow
 
