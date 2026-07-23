@@ -1,0 +1,49 @@
+:root {
+  --font: 'JetBrainsMono Nerd Font', 'Hack Nerd Font', 'FiraCode Nerd Font', ui-monospace, monospace;
+
+  --bg: #0f1117;
+  --bg-surface: #1a1d27;
+  --bg-surface-2: #222536;
+  --border: #2e3148;
+
+  --text: #c9ccd6;
+  --text-muted: #6b7280;
+  --text-heading: #f1f2f6;
+
+  --accent: #7c6af7;
+  --accent-hover: #6b59e8;
+
+  --green: #34d399;
+  --red: #f87171;
+
+  --radius: 8px;
+  --radius-sm: 4px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  font-family: var(--font);
+}
+
+input, select {
+  font-family: var(--font);
+}
